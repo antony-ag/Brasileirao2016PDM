@@ -1,16 +1,24 @@
 package br.com.fatecpg.brasileirao2016pdm;
 
-import android.graphics.Color;
+
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
-import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+
+public class
+MainActivity extends AppCompatActivity {
+
+    private ArrayList<String> data = new ArrayList<>();
+    private ArrayAdapter<String> listViewAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,42 +26,56 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
 
-        ArrayList<ListBr> list = new ArrayList<>();
+        ListView listView = (ListView) findViewById(R.id.listView);
+        data = new ArrayList<>();
+        int listLayout = android.R.layout.simple_list_item_1;
+        listViewAdapter = new ArrayAdapter<String>(this, listLayout, data);
+        listView.setAdapter(listViewAdapter);
 
-        for(int i = 0; i< 20 ; i++){
-            ListBr l = new ListBr();
-
-            l.setTitle("Título "+i);
-            l.setText("Texto "+i);
-
-            list.add(l);
-        }
-
-
-        ListView listv = (ListView) findViewById(R.id.listView);
-
-        //chamada da implementaçao do android:
-        //ArrayAdapter<Curso> adapter = new ArrayAdapter<Curso>(this,
-        //android.R.layout.simple_list_item_1, cursos);
-
-        //chamada da nossa implementação
-        ListBrAdapter adapter =
-                new ListBrAdapter(list, this);
-
-        listv.setAdapter(adapter);
+        updateList();
 
     }
+
 
     public void forceUpdate(View view){
+        updateList();
+    }
 
-        ArrayList l = new ArrayList(){};
+    public void updateList(){
+        data.clear();
+        data.add("Carregando...");
+        listViewAdapter.notifyDataSetChanged();
+        new DataReader(new AsyncResult() {
+            @Override
+            public void onResult(String response) {
+                processData(response);
+            }
 
-        for(int i = 0; i< 20; ++i) l.add("Texto "+ i);
+            @Override
+            public void onException(Exception e) {
+                Toast.makeText(getApplicationContext(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            }
+        }).execute();
+    }
 
-        ArrayAdapter<String> aa = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, l);
-        ListView list = (ListView) findViewById(R.id.listView);
-        list.setDrawingCacheBackgroundColor(Color.RED);
-        list.setAdapter(aa);
-        //To DO
+    public void processData (String UrlResponse){
+        try{
+            JSONObject jsonObj = new JSONObject(UrlResponse);
+            JSONArray rows = jsonObj.getJSONArray("rows");
+            data.clear();
+            for(int r = 0; r < rows.length(); r++){
+                JSONObject row = rows.getJSONObject(r);
+                JSONArray columns = row.getJSONArray("c");
+                String value = columns.getJSONObject(0).getString("v");
+                value += " " + columns.getJSONObject(1).getString("v");
+                value += " X " + columns.getJSONObject(2).getString("v");
+                value += " " + columns.getJSONObject(3).getString("v");
+                data.add(value);
+            }
+            listViewAdapter.notifyDataSetChanged();
+        }catch(Exception e){
+            Toast.makeText(getApplicationContext(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+        }
     }
 }
+
